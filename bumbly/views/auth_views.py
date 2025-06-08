@@ -3,12 +3,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from django.contrib.auth.hashers import make_password, check_password
-from bumbly.models import User
+from bumbly.models import User as CassandraUser
+from django.contrib.auth.models import User as DjangoUser
 from bumbly.utils.validation import signup_validation, login_validation, forgot_password_validation, reset_password_validation
 from django.http import HttpResponse
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from bumbly.cassandra_connector import get_session
+from datetime import datetime
 
 class Home(APIView):
   authentication_classes = [JWTAuthentication]
@@ -26,30 +29,49 @@ def signup(request):
   else :
     # Hash the password before storing
     hashed_password = make_password(data.get("password"))
-    existngUser = User.objects.filter(email=data.get("email")).first()
-    if existngUser:
+    
+    # Check if user exists in Django
+    existing_django_user = DjangoUser.objects.filter(email=data.get("email")).first()
+    if existing_django_user:
       return Response({"error" : "User already exists"}, status=status.HTTP_400_BAD_REQUEST)
-    newUser = User.objects.create(**data)
-    newUser.password = hashed_password
     
-    newUser.save()
+    # Create Django user first
+    django_user = DjangoUser.objects.create(
+        username=data.get("email"),  # Use email as username
+        email=data.get("email"),
+        first_name=data.get("first_name"),
+        last_name=data.get("last_name"),
+        password=hashed_password
+    )
     
-    token = RefreshToken.for_user(newUser)
-    print(token)
-    token.payload.update({"user_id" : str(newUser.id)})  # Convert UUID to string
+    # Create Cassandra user with same ID
+    cassandra_user = CassandraUser()
+    cassandra_user.id = django_user.id  # Use Django user's ID
+    cassandra_user.first_name = data.get("first_name")
+    cassandra_user.last_name = data.get("last_name")
+    cassandra_user.email = data.get("email")
+    cassandra_user.password = hashed_password
+    cassandra_user.age = data.get("age")
+    cassandra_user.gender = data.get("gender")
+    cassandra_user.created_at = datetime.now()
+    cassandra_user.updated_at = datetime.now()
+    cassandra_user.save()
+    
+    token = RefreshToken.for_user(django_user)
+    token.payload.update({"user_id" : django_user.id})  # Use integer ID directly
     
     # Create Response object and set cookies on it
     response = Response({"message" : "User created successfully", "user": {
-            "id": str(newUser.id),
-            "first_name": newUser.first_name,
-            "last_name": newUser.last_name,
-            "email": newUser.email
+            "id": django_user.id,
+            "first_name": django_user.first_name,
+            "last_name": django_user.last_name,
+            "email": django_user.email
         }}, status=status.HTTP_201_CREATED)
     
     # Set cookies on the Response object
-    # response.set_cookie(key="refresh_token", value=str(token), httponly=True,  samesite="Lax")
     response.set_cookie(key="access_token", value=str(token.access_token), httponly=True,  samesite="Lax")
     return response
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login(request):
@@ -58,16 +80,15 @@ def login(request):
   if validation_error:
     return Response({"error" : validation_error}, status=status.HTTP_400_BAD_REQUEST)
   else :
-    user = User.objects.filter(email=data.get("email")).first()
-    if user and check_password(data.get("password"), user.password):
-      token = RefreshToken.for_user(user)
-      token.payload.update({"user_id" : str(user.id)})  # Convert UUID to string
+    django_user = DjangoUser.objects.filter(email=data.get("email")).first()
+    if django_user and check_password(data.get("password"), django_user.password):
+      token = RefreshToken.for_user(django_user)
+      token.payload.update({"user_id" : django_user.id})  # Use integer ID directly
       
       # Create Response object and set cookies on it
       response = Response({"message" : "Login successful"}, status=status.HTTP_200_OK)
       
       # Set cookies on the Response object
-      # response.set_cookie(key="refresh_token", value=str(token), httponly=True, secure=True, samesite="Lax")
       response.set_cookie(key="access_token", value=str(token.access_token), httponly=True,  samesite="Lax")
       
       return response
@@ -77,5 +98,9 @@ def login(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout(request):
-  return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
+  # Clear cookies
+  response = Response({"message" : "Logout successful"}, status=status.HTTP_200_OK)
+  response.delete_cookie("access_token")
+  response.delete_cookie("refresh_token")
+  return response
 

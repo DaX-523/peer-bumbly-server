@@ -11,7 +11,7 @@ from .models import User, ConnectionRequest, GenderEnum, ConnectionStatusEnum
 
 # use this serializer for cassandra
 class UserSerializer(serializers.Serializer):
-    id = serializers.UUIDField(read_only=True)
+    id = serializers.IntegerField(read_only=True)
     first_name = serializers.CharField(max_length=255)
     last_name = serializers.CharField(max_length=255)
     email = serializers.CharField(max_length=255)
@@ -39,9 +39,9 @@ class UserSerializer(serializers.Serializer):
         return instance
 
 class ConnectionRequestSerializer(serializers.Serializer):
-    id = serializers.UUIDField(read_only=True)
-    from_user_id = serializers.UUIDField()
-    to_user_id = serializers.UUIDField()
+    id = serializers.IntegerField(read_only=True)
+    from_user_id = serializers.IntegerField()
+    to_user_id = serializers.IntegerField()
     status = serializers.ChoiceField(choices=[(e.value, e.value) for e in ConnectionStatusEnum])
     created_at = serializers.DateTimeField(read_only=True)
     updated_at = serializers.DateTimeField(read_only=True)

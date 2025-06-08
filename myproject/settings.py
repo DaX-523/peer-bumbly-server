@@ -78,27 +78,26 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
 DATABASES = {
-        'default': {
-            'ENGINE': 'django_cassandra_engine',
-            'NAME': 'bumbly',
-            'TEST_NAME': 'test_db',
-            'HOST': '172.19.0.2',
-            'OPTIONS': {
-                'replication': {
-                    'strategy_class': 'SimpleStrategy',
-                    'replication_factor': 1
-                }
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    },
+    'cassandra': {
+        'ENGINE': 'django_cassandra_engine',
+        'NAME': 'bumbly',
+        'TEST_NAME': 'test_db',
+        'HOST': '172.19.0.2',
+        'OPTIONS': {
+            'replication': {
+                'strategy_class': 'SimpleStrategy',
+                'replication_factor': 1
             }
         }
+    }
 }
+
+DATABASE_ROUTERS = ['myproject.db_router.DatabaseRouter']
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
