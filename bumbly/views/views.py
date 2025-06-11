@@ -1,5 +1,5 @@
 from django.shortcuts import render
-
+from datetime import datetime
 # Create your views here.
 from django.http import HttpResponse
 from django.template import loader
@@ -42,9 +42,14 @@ def create_connection_request(request):
     request_data["from_user_id"] = loggedInUser.id
     existing_request = ConnectionRequest.objects.filter(from_user_id=loggedInUser.id, to_user_id=request_data["to_user_id"]).first()
     if existing_request:
-        return Response({"error": "You already have a pending connection request with this user", "status":status.HTTP_400_BAD_REQUEST})
-    connection_request = ConnectionRequest.objects.create(**request_data)
+        return Response({"error": "You already have interaction with this user", "status":status.HTTP_400_BAD_REQUEST})
+    # connection_request = ConnectionRequest.objects.create(**request_data) normal django orm way
+    connection_request = ConnectionRequest() # but we are using cassandra so we do it this way
     connection_request.status = request_data.get("status")
+    connection_request.from_user_id = loggedInUser.id
+    connection_request.to_user_id = request_data.get("to_user_id")
+    connection_request.created_at = datetime.now()
+    connection_request.updated_at = datetime.now()
     connection_request.save()
     return Response(ConnectionRequestSerializer(connection_request).data, status=status.HTTP_201_CREATED)
 
@@ -58,7 +63,7 @@ def accept_or_reject_connection_request(request):
     allowed_statuses = [ConnectionStatusEnum.ACCEPTED.value, ConnectionStatusEnum.REJECTED.value]
     if request_data.get("status") not in allowed_statuses:
         return Response({"error": "Invalid status", "status":status.HTTP_400_BAD_REQUEST})
-    connsection_request = ConnectionRequest.objects.filter(from_user_id=loggedInUser.id, to_user_id=request_data.get("to_user_id")).first()
+    connsection_request = ConnectionRequest.objects.filter(from_user_id=loggedInUser.id, id=request_data.get("request_id")).first()
     if not connsection_request:
         return Response({"error": "Connection request not found", "status": status.HTTP_404_NOT_FOUND})
     if connsection_request.status == ConnectionStatusEnum.IGNORED.value:

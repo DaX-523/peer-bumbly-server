@@ -30,7 +30,7 @@ class User(DjangoCassandraModel):
   email = columns.Text()
   password = columns.Text()
   age = columns.Integer()
-  gender = columns.Text()  # Will store enum values
+  gender = columns.Text()  
   photo_url = columns.Text()
   bio = columns.Text()
   location = columns.Text()

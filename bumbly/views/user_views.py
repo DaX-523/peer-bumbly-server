@@ -13,7 +13,8 @@ def get_user_pending_requests(request): #from params /:user_id it is received he
   loggedInUser = request.user
   session = get_session()
   try:
-    pending_requests = session.execute(f"SELECT * FROM connection_request WHERE to_user_id = '{loggedInUser.id}' AND status = '{ConnectionStatusEnum.INTERESTED.value}'")
+    query = f"SELECT * FROM connection_request WHERE to_user_id = %s AND status = %s ALLOW FILTERING"
+    pending_requests = session.execute(query, [int(loggedInUser.id), ConnectionStatusEnum.INTERESTED.value])
     return Response({"pending_requests": pending_requests, "status": status.HTTP_200_OK})
   except Exception as error:
     print(error)
@@ -26,7 +27,7 @@ def get_user_connections(request):
   loggedInUser = request.user
   session = get_session()
   try:
-    connections = session.execute(f"SELECT * FROM connection_request WHERE to_user_id = '{loggedInUser.id}' OR from_user_id = '{loggedInUser.id}'")
+    connections = session.execute(f"SELECT * FROM connection_request WHERE to_user_id = '{loggedInUser.id}' OR from_user_id = '{loggedInUser.id}' ALLOW FILTERING")
     return Response({"connections": connections, "status": status.HTTP_200_OK})
   except Exception as error:
     print(error)
@@ -38,13 +39,13 @@ def get_user_feed(request):
   loggedInUser = request.user
   session = get_session()
   try:
-    user_connections = session.execute(f"SELECT * FROM connection_request WHERE to_user_id = '{loggedInUser.id}' OR from_user_id = '{loggedInUser.id}'")
+    user_connections = session.execute(f"SELECT * FROM connection_request WHERE to_user_id = '{loggedInUser.id}' OR from_user_id = '{loggedInUser.id}' ALLOW FILTERING")
     #hide these users from feed as they have alrady made request to the logged in user  
     usersToHide = set()
     for connection in user_connections:
         usersToHide.add(connection.from_user_id)
         usersToHide.add(connection.to_user_id)
-    feed = session.execute(f"SELECT * FROM user WHERE id NOT IN {[req for req in usersToHide]} AND id != {loggedInUser.id}")
+    feed = session.execute(f"SELECT * FROM user WHERE id NOT IN {[req for req in usersToHide]} AND id != {loggedInUser.id} ALLOW FILTERING")
     return Response({"feed": feed, "status": status.HTTP_200_OK})
   except Exception as error:
     print(error)
