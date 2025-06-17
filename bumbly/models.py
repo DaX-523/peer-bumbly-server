@@ -67,8 +67,23 @@ class ConnectionRequest(DjangoCassandraModel):
   def __str__(self):
     return f"ConnectionRequest from {self.from_user_id} to {self.to_user_id}"
   
+class SuperConnectionRequest(DjangoCassandraModel):
+  id = columns.BigInt(primary_key=True)
+  from_user_id = columns.BigInt()
+  to_user_id = columns.BigInt()
+  created_at = columns.DateTime()
+  updated_at = columns.DateTime()
 
-class Chat(DjangoCassandraModel):
+  def save(self):
+    if not self.id:
+      self.id = generate_id()
+    super().save()
+
+  def __str__(self):
+    return f"SuperConnectionRequest from {self.from_user_id} to {self.to_user_id}"
+  
+
+class Message(DjangoCassandraModel):
    id = columns.BigInt(primary_key=True)
    sender_id = columns.BigInt()
    receiver_id = columns.BigInt()
@@ -82,4 +97,19 @@ class Chat(DjangoCassandraModel):
      super().save()
 
    def __str__(self):
-     return f"Chat between {self.sender_id} and {self.receiver_id}"
+     return f"Message between {self.sender_id} and {self.receiver_id}"
+   
+class Chat(DjangoCassandraModel):
+  id = columns.BigInt(primary_key=True)
+  participants = columns.List(columns.BigInt())
+  created_at = columns.DateTime()
+  updated_at = columns.DateTime()
+
+  def save(self):
+    if not self.id:
+      self.id = generate_id()
+    super().save()
+
+  def __str__(self):
+    return f"Chat between {self.participants}"
+    

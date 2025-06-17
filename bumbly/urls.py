@@ -16,6 +16,7 @@ urlpatterns = [
     path('pending-requests/', user_views.get_user_pending_requests, name='pending-requests'),
     path('connections/', user_views.get_user_connections, name='connections'),
     path('connections/request/create/', views.create_connection_request, name='create-connection-request'),
+    path('connections/request/create/super/', views.create_super_connection_request, name='create-super-connection-request'),
     path('connections/request/respond/', views.accept_or_reject_connection_request, name='accept-or-reject-connection-request'),
     path('profile/<int:user_id>/', profile.user_profile, name='profile'),
 ]

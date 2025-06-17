@@ -1,7 +1,7 @@
 # Serializers turn your Django model into JSON (the data format used in APIs) and back.
 
 from rest_framework import serializers
-from .models import User, ConnectionRequest, GenderEnum, ConnectionStatusEnum
+from .models import User, ConnectionRequest, GenderEnum, ConnectionStatusEnum, SuperConnectionRequest
 
 # use this serializer for model serializer but it doesnt align with cassandra
 # class UserSerializer (serializers.ModelSerializer):
@@ -54,3 +54,13 @@ class ConnectionRequestSerializer(serializers.Serializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
+    
+class SuperConnectionRequestSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    from_user_id = serializers.IntegerField()
+    to_user_id = serializers.IntegerField()
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
+    
+    def create(self, validated_data):
+        return SuperConnectionRequest.create(**validated_data)
